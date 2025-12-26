@@ -6,7 +6,6 @@
   doc-author: ("Hugo Allainé", "Léo Angonnet", "Kaoura Fablet", "William Imbert", "Noémie Lévêque"),
   course-name: "RC50",
   doc,
-  
 )
 
 = Introduction et contexte du projet
@@ -38,7 +37,7 @@ Pour éviter ce problème, nous avons pensé à une topologie en anneau où chaq
 Enfin, la dernière approche que nous avons étudié est la topologie maillée, où chaque université serait reliée à l'intégralité des autres universités. Avec cette topologie, il est possible d'atteindre une résilience très importante où plusieurs noeuds peuvent être impactés avant que les services deviennent inaccessibles. Cette approche a cependant comme désaventage une nombre des liaisons très élevés, ce qui accroit la complexité de maintenance et les coûts.
 
 *Quel outil de gestion documentaire utiliser ?*\
-Afin de gérer les documents des universités, nous avons du réfléchir à quel outil serait adapté pour ce cas d'utilisation. Nous avions deux possibilités : 
+Afin de gérer les documents des universités, nous avons du réfléchir à quel outil serait adapté pour ce cas d'utilisation. Nous avions deux possibilités :
 Premièrement, nous avons pensé à développer nous-même une plateforme simple de gestion de documents car plusieurs membres de notre groupe sont issus de la branche Développement. L'avantage de cette solution aurait été de pouvoir mettre en pratique nos compétences en développement. En contrepartie, le développement d'une solution de zéro, même simple, est très chronophage et serait un "bonus" au projet.
 La deuxième possibilité était de choisir une solution open source déjà existante, telle que Paperless-ngx ou Nextcloud. De cette manière, nous aurions une solution plus robuste avec un moindre effort. Ces solutions reposent souvent sur d'autres services comme Redis
 
@@ -56,34 +55,52 @@ Pour assurer la sécurité du réseau, nous avons listé les différentes mesure
 - Authentification des utilisateurs sur le service de gestion documentaire
 
 *Comment assurer le déploiment multi universités ?*\
-Afin de déployer nos services de manière répliquable, nous avons analysé plusieurs options. 
+Afin de déployer nos services de manière répliquable, nous avons analysé plusieurs options.
 Dans un premier temps, la solution la plus simple consiste à simplement déployer les nouvelles configurations par scripts bash sur les serveurs. Cela a l'avantage d'être simple à mettre en place, mais une configuration complète peut être assez complexe à gérer.
 Nous avons également bien évidemment pensé à Docker, couplé à Docker Compose qui simplifient grandement le processus. De plus, certains outils de gestion documentaire comme Paperless-ngx proposent déjà des images adaptées.
 Ensuite, nous avons évoqué la possibilité d'orchestrer le déploiment avec Ansible, permettant de mieux gérer les changements et la réplicabilité de notre travail.
 
-*Comment simuler le réseau d'une manière collaborative ?*\
-Enfin, nous avons du réfléchir à une manière de collaborer sur ce projet de manière stable.
-En effet, la solution par défaut aurait été de travailler chacun sur notre propre environnement virtuel en local et de nous envoyer les changement apportés régulièrement. Cependant, nous avons considéré ce mode de travail nous ferait perdre beaucoup de temps, et avons souhaité travailler sur un environnement partagé.........
 
 
-= Solution retenue
+
+= Solution retenue et finalisation de la conception
 
 Une fois cette première phase de réflexion passée, nous avons échangé avec notre porteur de projet pour lui faire part des différentes solutions envisagées. Cela nous a permi d'adapter certains choix (comme celui de la topologie), avant de réaliser la vidéo de mi-semestre présentant la solution retenue et le plan de mise en oeuvre.
 
 Premièrement, nous avons choisi une topologie en anneau pour relier les universités entre elles. Il s'agissait de la solution "intermédiaire" entre la topologie en étoile ne garantissant aucune redondance et la topologie maillée, trop complexe à maintenir pour notre projet. Nous gardons toutefois à l'esprit que passer sur une topologie maillée par la suite pourrait garantir une meilleure résilience.
-Pour l'outil de gestion de base de données, nous nous sommes décidés à utiliser une solution déjà existante car le développement n'est pas une compétence évaluée pour le projet. Nous avons choisi d'utiliser Paperless-ngx car la procédure de déploiment sur infrastructure distribuée nous a semblé mieux documentée. Ce choix implique le déploiment d'un broker Redis en plus des services demandés de plus, nous avons retenu PostgreSQL comme base de données car il s'agit de la référence actuelle dans l'industrie, bien que MySQL soit également compatible réputée.
+Pour l'outil de gestion documentaire, nous nous sommes décidés à utiliser une solution déjà existante car le développement n'est pas une compétence évaluée pour le projet. Nous avons choisi d'utiliser Paperless-ngx car la procédure de déploiment sur infrastructure distribuée nous a semblé mieux documentée. Ce choix implique le déploiment d'un broker Redis en plus des services demandés de plus, nous avons retenu PostgreSQL comme base de données car il s'agit de la référence actuelle dans l'industrie, bien que MySQL soit également compatible et réputée. De plus, nous avons décidé de partir sur GlusterFS pour le stockage des fichiers. En effet, nous avons jugé que la complexité de Ceph ne valait pas nécessairement la peine pour ce projet car les volumes d'entrée et sortie ne serait pas forcément très élevés. Cependant, il serait toujours possible de migrer sur Ceph par la suite si besoin.
+Au niveau sécurisation du réseau, nous avons choisi d'implémenter toutes les mesures que nous avons énumérées lors de la phase d'étude, avec notamment la création d'un tunnel VPN site à site (avec IPsec car nous utilisons des routeurs Cisco), et la création d'ACL.
+Pour le déploiment des services, notre choix s'est porté Docker et Docker Compose, couplé à Ansible pour automatiser le tout. En effet, les services que nous avons décidé d'utiliser sont déjà disponibles conteneurisés, et nous avons jugé qu'ansible nous aiderait à orchestrer le déploiment de manière sûre.
+
+Enfin, nous avons du réfléchir à une manière de collaborer sur ce projet de manière stable. Pour simuler notre environnement de travail, il nous a semblé évident de nous baser sur des machines virtuelles plutôt que des conteneurs car cela nous permettrait de mieux simuler le fonctionnement réel du réseau. La solution par défaut aurait été de travailler chacun sur notre propre environnement virtuel en local et de nous envoyer les changement apportés régulièrement. Cependant, nous avons considéré ce mode de travail nous ferait perdre beaucoup de temps, et avons souhaité travailler sur un environnement partagé. Heureusement, l'un des membres de notre groupe disposait d'un homelab à domicile et a ainsi proposé d'y déployer un environnement virtuel partagé basé sur Proxmox. Ainsi, cet environnement se principalement d'une machine virtuelle par université afin de simuler chacun de leur serveur, ainsi qu'une machine virtuelle contenant GNS3 afin de simuler le réseau reliant les universités.
+
+Afin de terminer cette phase de conception, nous avons mis au point le plan d'adressage prévu :
+
+Schéma du réseau  
 
 
+= Implémentation du projet
 
+Avant de commencer à réaliser notre projet, nous avons mis en place un planning d'implémentation en 6 étapes :
++ Mise en place de l'infrastructure virtuelle gns3
++ Réalisation de la topologie réseau virtuelle
++ Mise en place de la base de données distribuée
++ Mise en place de tous les services
++ Sécurisation du réseau
++ Début rédaction du rapport
 
-Quelle solution on a retenu (ce qu'il y a dans la vidéo), avantages et inconvénients
-Schéma du réseau
+Voici donc le résultat de notre implémentation
 
+*Mise en place de l'infrastructure virtuelle gns3*
 
-= Résultats de l'implémentation
-// Faire une partie à part pour l'organisation et répartition des tâches ?
+Nous avons commencé par préparer le terrain en mettant en place l'infrastructure virtuelle sur le homelab avec Proxmox. Ainsi, nous avons créé 6 machines virtuelles représentant les serveurs, ainsi qu'une machine virtuelle GNS3 simulant le réseau :
+#image("assets/vm.png")
 
-Présenter comment on a implémenté pour collaborer (avec Nasdak), et ce que ça donne pour nous
+*Réalisation de la topologie virtuelle*
+Une fois avoir créé notre enironnement de travail, nous allons utiliser GNS3 afin de simuler le réseau de manière virtuelle. Pour cela, nous allons recrééer le schéma d'adressage dans le logiciel en utilisant les objets routeurs et switch configurés avec Cisco IOS. De plus, nous utilisons l'objet "cloud", modélisant les machines virtuelles des universités dans notre réseau. Ainsi, voici la topologie reproduite.
+#image("assets/gns3.png")
+Les objets cloud sont configurés avec les adresses IP des machines virtuelles Proxmox, ce qui permet une réelle simulation du réseau et des serveurs.
+
 
 = Retour d'expérience
 
